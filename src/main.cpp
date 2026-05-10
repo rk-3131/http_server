@@ -1,8 +1,10 @@
-#include<iostream>
+#include "../include/Server.h"
 
-using namespace std;
+int main() {
 
-int main(){
-	cout<<"Hello from project";
-	return 0;
+    Server server(8080);
+
+    server.start();
+
+    return 0;
 }
