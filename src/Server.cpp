@@ -7,6 +7,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+using namespace std;
+
 Server::Server(int port) {
     this->port = port;
     serverSocket = -1;
@@ -18,11 +20,11 @@ void Server::start() {
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
 
     if (serverSocket < 0) {
-        std::cerr << "Socket creation failed\n";
+        cerr << "Socket creation failed\n";
         return;
     }
 
-    std::cout << "Socket created successfully\n";
+    cout << "Socket created successfully\n";
 
     // 2. Define server address
     sockaddr_in serverAddress{};
@@ -36,66 +38,68 @@ void Server::start() {
              (sockaddr*)&serverAddress,
              sizeof(serverAddress)) < 0) {
 
-        std::cerr << "Bind failed\n";
+        cerr << "Bind failed\n";
         return;
     }
 
-    std::cout << "Bind successful\n";
+    cout << "Bind successful\n";
 
     // 4. Listen for connections
     if (listen(serverSocket, 5) < 0) {
-        std::cerr << "Listen failed\n";
+        cerr << "Listen failed\n";
         return;
     }
 
-    std::cout << "Server listening on port "
-              << port << "\n";
+    cout << "Server listening on port "
+          << port << "\n";
 
-    // 5. Accept client connection
-    sockaddr_in clientAddress{};
-    socklen_t clientSize = sizeof(clientAddress);
+    while (true) {
 
-    int clientSocket = accept(
-        serverSocket,
-        (sockaddr*)&clientAddress,
-        &clientSize
-    );
+        sockaddr_in clientAddress{};
+        socklen_t clientSize = sizeof(clientAddress);
 
-    if (clientSocket < 0) {
-        std::cerr << "Client connection failed\n";
-        return;
+        int clientSocket = accept(
+            serverSocket,
+            (sockaddr*)&clientAddress,
+            &clientSize
+        );
+
+        if (clientSocket < 0) {
+            cerr << "Client connection failed\n";
+            continue;
+        }
+
+        cout << "\nClient connected!\n";
+
+        char buffer[4096] = {0};
+
+        ssize_t bytesReceived =
+            recv(clientSocket,
+                buffer,
+                sizeof(buffer),
+                0);
+
+        if (bytesReceived < 0) {
+            cerr << "Receive failed\n";
+            close(clientSocket);
+            continue;
+        }
+
+        cout << "\n========= REQUEST =========\n";
+        cout << buffer << "\n";
+        cout << "===========================\n";
+
+        const char* response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/plain\r\n"
+            "\r\n"
+            "Hello from C++ server";
+
+        send(clientSocket,
+            response,
+            strlen(response),
+            0);
+
+        close(clientSocket);
     }
-
-    std::cout << "Client connected!\n";
-
-    // 6. Receive data
-    char buffer[4096] = {0};
-
-    ssize_t bytesReceived =
-        recv(clientSocket, buffer, sizeof(buffer), 0);
-
-    if (bytesReceived < 0) {
-        std::cerr << "Receive failed\n";
-        return;
-    }
-
-    std::cout << "\n========= REQUEST =========\n";
-    std::cout << buffer << "\n";
-    std::cout << "===========================\n";
-
-    // 7. Send response
-    const char* response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "\r\n"
-        "Hello from C++ server";
-
-    send(clientSocket,
-         response,
-         strlen(response),
-         0);
-
-    // 8. Close sockets
-    close(clientSocket);
-    close(serverSocket);
 }
