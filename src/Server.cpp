@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <sstream>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -51,7 +52,7 @@ void Server::start() {
     }
 
     cout << "Server listening on port "
-          << port << "\n";
+         << port << "\n";
 
     while (true) {
 
@@ -75,9 +76,9 @@ void Server::start() {
 
         ssize_t bytesReceived =
             recv(clientSocket,
-                buffer,
-                sizeof(buffer),
-                0);
+                 buffer,
+                 sizeof(buffer),
+                 0);
 
         if (bytesReceived < 0) {
             cerr << "Receive failed\n";
@@ -85,20 +86,54 @@ void Server::start() {
             continue;
         }
 
+        // Convert request into string
+        string request(buffer);
+
         cout << "\n========= REQUEST =========\n";
-        cout << buffer << "\n";
+        cout << request << "\n";
         cout << "===========================\n";
 
-        const char* response =
+        // Parse HTTP request
+        istringstream requestStream(request);
+
+        string method;
+        string path;
+        string version;
+
+        requestStream >> method >> path >> version;
+
+        cout << "Method: " << method << endl;
+        cout << "Path: " << path << endl;
+        cout << "Version: " << version << endl;
+
+        // Routing
+        string body;
+
+        if (path == "/") {
+            body = "<h1>Home Page</h1>";
+        }
+        else if (path == "/about") {
+            body = "<h1>About Page</h1>";
+        }
+        else if (path == "/contact") {
+            body = "<h1>Contact Page</h1>";
+        }
+        else {
+            body = "<h1>404 Not Found</h1>";
+        }
+
+        // Build HTTP response
+        string response =
             "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/plain\r\n"
-            "\r\n"
-            "Hello from C++ server";
+            "Content-Type: text/html\r\n"
+            "Content-Length: " + to_string(body.size()) + "\r\n"
+            "\r\n" +
+            body;
 
         send(clientSocket,
-            response,
-            strlen(response),
-            0);
+             response.c_str(),
+             response.size(),
+             0);
 
         close(clientSocket);
     }
