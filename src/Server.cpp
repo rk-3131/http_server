@@ -8,11 +8,43 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+#include <fstream>
+
 using namespace std;
 
 Server::Server(int port) {
     this->port = port;
     serverSocket = -1;
+}
+
+string getContentType(const string& path) {
+
+    if (path.find(".html") != string::npos)
+        return "text/html";
+
+    if (path.find(".css") != string::npos)
+        return "text/css";
+
+    if (path.find(".js") != string::npos)
+        return "application/javascript";
+
+    return "text/plain";
+}
+
+string readFile(const string& filePath) {
+    cout << "Inside of the readfile function "<<endl;
+    ifstream file(filePath);
+
+    if (!file.is_open()) {
+        return "Nothing found";
+    }
+
+    string content(
+        (istreambuf_iterator<char>(file)),
+        istreambuf_iterator<char>()
+    );
+
+    return content;
 }
 
 void Server::start() {
@@ -106,26 +138,41 @@ void Server::start() {
         cout << "Path: " << path << endl;
         cout << "Version: " << version << endl;
 
-        // Routing
-        string body;
+        string filePath;
 
         if (path == "/") {
-            body = "<h1>Home Page</h1>";
-        }
-        else if (path == "/about") {
-            body = "<h1>About Page</h1>";
-        }
-        else if (path == "/contact") {
-            body = "<h1>Contact Page</h1>";
+            filePath = "../public/index.html";
         }
         else {
-            body = "<h1>404 Not Found</h1>";
+            filePath = "../public" + path;
         }
+        string body = readFile(filePath);
+        if (body.empty()) {
 
+            body = "<h1>404 File Not Found</h1>";
+
+            string response =
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-Type: text/html\r\n"
+                "Content-Length: " + to_string(body.size()) + "\r\n"
+                "\r\n" +
+                body;
+
+            send(clientSocket,
+            response.c_str(),
+            response.size(),
+            0);
+
+            close(clientSocket);
+
+            continue;
+        }
         // Build HTTP response
+        string contentType = getContentType(filePath);
+
         string response =
             "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
+            "Content-Type: " + contentType + "\r\n"
             "Content-Length: " + to_string(body.size()) + "\r\n"
             "\r\n" +
             body;
@@ -138,3 +185,4 @@ void Server::start() {
         close(clientSocket);
     }
 }
+
