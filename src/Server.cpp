@@ -11,8 +11,114 @@
 
 #include <fstream>
 
+#include<thread>
 using namespace std;
 
+void handleClient(int clientSocket)
+{
+    this_thread::sleep_for(
+    chrono::seconds(5)
+    );
+    cout << "Thread ID: "
+        << this_thread::get_id()
+        << endl;
+    char buffer[4096] = {0};
+
+        ssize_t bytesReceived =
+            recv(clientSocket,
+                 buffer,
+                 sizeof(buffer),
+                 0);
+
+        if (bytesReceived < 0) {
+            cerr << "Receive failed\n";
+            close(clientSocket);
+            return;
+        }
+
+        // Convert request into string
+        string request(buffer);
+
+        cout << "\n========= REQUEST =========\n";
+        cout << request << "\n";
+        cout << "===========================\n";
+
+        // Parse HTTP request
+        istringstream requestStream(request);
+
+        string method;
+        string path;
+        string version;
+
+        requestStream >> method >> path >> version;
+
+        if(method.empty() ||
+            path.empty() ||
+            version.empty())
+        {
+            close(clientSocket);
+            return;
+        }
+        if(path == "/favicon.ico")
+        {
+            close(clientSocket);
+            return;
+        }
+        cout << "Method: " << method << endl;
+        cout << "Path: " << path << endl;
+        cout << "Version: " << version << endl;
+
+        string filePath;
+
+        if (path == "/") {
+            filePath = "../public/index.html";
+        }
+        else {
+            filePath = "../public" + path;
+        }
+        if(filePath.back() == '/')
+        {
+            close(clientSocket);
+            return;
+        }
+        string body = readFile(filePath);
+        if (body.empty()) {
+
+            body = "<h1>404 File Not Found</h1>";
+
+            string response =
+                "HTTP/1.1 404 Not Found\r\n"
+                "Content-Type: text/html\r\n"
+                "Content-Length: " + to_string(body.size()) + "\r\n"
+                "\r\n" +
+                body;
+
+            send(clientSocket,
+            response.c_str(),
+            response.size(),
+            0);
+
+            close(clientSocket);
+            return;
+        }
+        // Build HTTP response
+        string contentType = getContentType(filePath);
+
+        string response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: " + contentType + "; charset=UTF-8\r\n"
+            "Content-Length: " + to_string(body.size()) + "\r\n"
+            "\r\n" +
+            body;
+
+        send(clientSocket,
+             response.c_str(),
+             response.size(),
+             0);
+
+        close(clientSocket);
+    
+}
 Server::Server(int port) {
     this->port = port;
     serverSocket = -1;
@@ -37,6 +143,14 @@ void Server::start() {
     serverAddress.sin_family = AF_INET;
     serverAddress.sin_addr.s_addr = INADDR_ANY;
     serverAddress.sin_port = htons(port);
+
+    int opt = 1;
+
+    setsockopt(serverSocket,
+           SOL_SOCKET,
+           SO_REUSEADDR,
+           &opt,
+           sizeof(opt));
 
     // 3. Bind socket to port
     if (bind(serverSocket,
@@ -76,85 +190,12 @@ void Server::start() {
 
         cout << "\nClient connected!\n";
 
-        char buffer[4096] = {0};
+        thread clientThread(
+            handleClient,
+            clientSocket
+        );
 
-        ssize_t bytesReceived =
-            recv(clientSocket,
-                 buffer,
-                 sizeof(buffer),
-                 0);
-
-        if (bytesReceived < 0) {
-            cerr << "Receive failed\n";
-            close(clientSocket);
-            continue;
-        }
-
-        // Convert request into string
-        string request(buffer);
-
-        cout << "\n========= REQUEST =========\n";
-        cout << request << "\n";
-        cout << "===========================\n";
-
-        // Parse HTTP request
-        istringstream requestStream(request);
-
-        string method;
-        string path;
-        string version;
-
-        requestStream >> method >> path >> version;
-
-        cout << "Method: " << method << endl;
-        cout << "Path: " << path << endl;
-        cout << "Version: " << version << endl;
-
-        string filePath;
-
-        if (path == "/") {
-            filePath = "../public/index.html";
-        }
-        else {
-            filePath = "../public" + path;
-        }
-        string body = readFile(filePath);
-        if (body.empty()) {
-
-            body = "<h1>404 File Not Found</h1>";
-
-            string response =
-                "HTTP/1.1 404 Not Found\r\n"
-                "Content-Type: text/html\r\n"
-                "Content-Length: " + to_string(body.size()) + "\r\n"
-                "\r\n" +
-                body;
-
-            send(clientSocket,
-            response.c_str(),
-            response.size(),
-            0);
-
-            close(clientSocket);
-
-            continue;
-        }
-        // Build HTTP response
-        string contentType = getContentType(filePath);
-
-        string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: " + contentType + "; charset=UTF-8\r\n"
-            "Content-Length: " + to_string(body.size()) + "\r\n"
-            "\r\n" +
-            body;
-
-        send(clientSocket,
-             response.c_str(),
-             response.size(),
-             0);
-
-        close(clientSocket);
+        clientThread.detach();
     }
 }
 
