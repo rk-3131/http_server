@@ -1,5 +1,6 @@
 #include "../include/Server.h"
-
+#include "../include/FileHandler.h"
+#include "../include/MIME_type.h"
 #include <iostream>
 #include <cstring>
 #include <sstream>
@@ -17,35 +18,6 @@ Server::Server(int port) {
     serverSocket = -1;
 }
 
-string getContentType(const string& path) {
-
-    if (path.find(".html") != string::npos)
-        return "text/html";
-
-    if (path.find(".css") != string::npos)
-        return "text/css";
-
-    if (path.find(".js") != string::npos)
-        return "application/javascript";
-
-    return "text/plain";
-}
-
-string readFile(const string& filePath) {
-    cout << "Inside of the readfile function "<<endl;
-    ifstream file(filePath);
-
-    if (!file.is_open()) {
-        return "Nothing found";
-    }
-
-    string content(
-        (istreambuf_iterator<char>(file)),
-        istreambuf_iterator<char>()
-    );
-
-    return content;
-}
 
 void Server::start() {
 
