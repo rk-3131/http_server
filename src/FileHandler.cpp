@@ -7,7 +7,7 @@ using namespace std;
 
 string readFile(const string& filePath)
 {
-    ifstream file(filePath);
+    ifstream file(filePath, ios::binary);
 
     if (!file.is_open()) {
         return "";

@@ -144,7 +144,7 @@ void Server::start() {
 
         string response =
             "HTTP/1.1 200 OK\r\n"
-            "Content-Type: " + contentType + "\r\n"
+            "Content-Type: " + contentType + "; charset=UTF-8\r\n"
             "Content-Length: " + to_string(body.size()) + "\r\n"
             "\r\n" +
             body;
