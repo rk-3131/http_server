@@ -80,10 +80,13 @@ void handleClient(int clientSocket)
         string body;
         getline(requestStream, body);
         cout << "Body: " << body << endl;
+        size_t pos = body.find("=");
+        string username =
+            body.substr(pos + 1);
         if (path == "/submit")
         {
             string html =
-                "<h1>Form Submitted</h1>";
+                "<h1>Hello "+username+" </h1>";
 
             string response =
                 "HTTP/1.1 200 OK\r\n"
