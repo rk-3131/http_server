@@ -5,4 +5,5 @@ add_executable(server
                 src/main.cpp
                 src/Server.cpp
                 src/FileHandler.cpp
-                src/MIME_type.cpp)
+                src/MIME_type.cpp
+                src/HandleClient.cpp)

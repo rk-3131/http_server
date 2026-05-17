@@ -37,5 +37,9 @@ string getContentType(const string& path) {
         return "image/webp";
     }
 
+    if(path.find(".json") != string::npos){
+        return "application/json";
+    }
+
     return "text/plain";
 }
