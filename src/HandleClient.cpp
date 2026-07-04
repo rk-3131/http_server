@@ -1,4 +1,6 @@
 #include "../include/HandleClient.h"
+#include "../include/ParseRequest.h"
+#include "../include/HttpResponse.h"
 
 using namespace std;
 
@@ -33,27 +35,24 @@ void handleClient(int clientSocket)
     cout << "===========================\n";
 
     // Parse HTTP request
-    istringstream requestStream(request);
+    HttpRequest http_request =
+        parseRequest(request);
 
-    string method;
-    string path;
-    string version;
-
-    requestStream >> method >> path >> version;
-    if (method.empty() ||
-        path.empty() ||
-        version.empty())
+    if (http_request.method.empty() ||
+        http_request.path.empty() ||
+        http_request.version.empty())
     {
         close(clientSocket);
         return;
     }
-    if (path == "/favicon.ico")
+    if (http_request.path == "/favicon.ico")
     {
         close(clientSocket);
         return;
     }
-    if (method == "GET" &&
-        path == "/api/hello")
+
+    if (http_request.method == "GET" &&
+        http_request.path == "/api/hello")
     {
         string json =
             R"({
@@ -75,30 +74,20 @@ void handleClient(int clientSocket)
              0);
 
         close(clientSocket);
-
         return;
     }
-    if (method == "POST")
+
+    if (http_request.method == "POST")
     {
+
         cout << "POST Method detected" << endl;
-        string line;
-        getline(requestStream, line);
-        while (getline(requestStream, line))
+        if (http_request.path == "/submit")
         {
-            if (line == "\r" || line.empty())
-            {
-                break;
-            }
-            cout << "Header: " << line << endl;
-        }
-        string body;
-        getline(requestStream, body);
-        cout << "Body: " << body << endl;
-        size_t pos = body.find("=");
-        string username =
-            body.substr(pos + 1);
-        if (path == "/submit")
-        {
+
+            cout << "Body: " << http_request.body << endl;
+            size_t pos = http_request.body.find("=");
+            string username =
+                http_request.body.substr(pos + 1);
             string html =
                 "<h1>Hello " + username + " </h1>";
 
@@ -121,18 +110,18 @@ void handleClient(int clientSocket)
             return;
         }
     }
-    cout << "Method: " << method << endl;
-    cout << "Path: " << path << endl;
-    cout << "Version: " << version << endl;
+    cout << "Method: " << http_request.method << endl;
+    cout << "Path: " << http_request.path << endl;
+    cout << "Version: " << http_request.version << endl;
     string filePath;
 
-    if (path == "/")
+    if (http_request.path == "/")
     {
         filePath = "../public/index.html";
     }
     else
     {
-        filePath = "../public" + path;
+        filePath = "../public" + http_request.path;
     }
     if (filePath.back() == '/')
     {
@@ -180,4 +169,3 @@ void handleClient(int clientSocket)
 
     close(clientSocket);
 }
-
